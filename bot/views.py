@@ -6,7 +6,7 @@ from telegram import Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext 
 from .models import TelegramUser
 from telegram import Bot
-TOKEN = ''
+TOKEN = '6662737355:AAF2gOqlG6ztr9cMWHOtgeu7JQjMKaQqEMQ'
 #updater = Updater(myBot)
 
 updater = Updater(token=TOKEN, use_context=True)
