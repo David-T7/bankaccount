@@ -26,6 +26,7 @@ def open_account(update: Update, context: CallbackContext) -> None:
 
 @csrf_exempt
 def telegram_webhook(request):
+    print("request method is ",request.method)
     if request.method == 'POST':
         json_str = request.body.decode('UTF-8')
         update = Update.de_json(json.loads(json_str), updater.bot)
@@ -34,6 +35,9 @@ def telegram_webhook(request):
         updater.dispatcher.process_update(update)
 
         return HttpResponse('OK')
+    elif request.method == 'GET':
+        # Handle GET requests if needed
+        return HttpResponse('Telegram Webhook Endpoint')
     else:
         return HttpResponse('Method not allowed', status=405)
 
