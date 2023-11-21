@@ -1,43 +1,70 @@
+# views.py
 import json
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext
-from .models import UserProfile
+from .models import UserProfile , TelegramUser
 from telegram import Bot
+from telegram import InputFile
 
-TOKEN = '6662737355:AAF2gOqlG6ztr9cMWHOtgeu7JQjMKaQqEMQ'
+TOKEN = ''
 updater = Updater(token=TOKEN, use_context=True)
 
 
 def start(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Welcome! To open a bank account, use /upload_id to upload your ID document.')
+    user = update.message.from_user
+    telegram_user, created = TelegramUser.objects.get_or_create(
+        user_id=user.id,
+        defaults={'first_name': user.first_name, 'last_name': user.last_name}
+    )
+
+    if not created:
+        update.message.reply_text('Welcome! To open a bank account, use /upload_id to upload your ID document.')
+    else:
+        update.message.reply_text('Welcome! To register , use /open_account .')
 
 
 def upload_id(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Please upload a clear picture of your ID document.')
-
+    user = update.message.from_user
+    print("in uploadid",user)
+    # user_profile, created = UserProfile.objects.get_or_create(user=user)
+    # print("profile created")
+    # # Check if an ID document is already uploaded
+    # if created:
+    #     update.message.reply_text('ID document already uploaded!')
+    # else:
+    #     print("trying to upload")
+    #     # Save the file to the UserProfile model
+    #     user_profile.id_document = InputFile()
+    #     user_profile.save()
+    update.message.reply_text('ID document uploaded successfully. Now, use /upload_signature to upload your signature.')
 
 def upload_signature(update: Update, context: CallbackContext) -> None:
-    update.message.reply_text('Please upload a clear picture of your signature.')
+    user = update.message.from_user
+    user_profile, created = UserProfile.objects.get_or_create(user=user)
+
+    # Check if an ID document is already uploaded
+    if not created:
+        update.message.reply_text('ID document already uploaded!')
+    else:
+        # Save the file to the UserProfile model
+        user_profile.signature = InputFile()
+        user_profile.save()
+        update.message.reply_text('Signature document uploaded successfully. Now, you have completed registeration!')
+
 
 
 def open_account(update: Update, context: CallbackContext) -> None:
     user = update.message.from_user
-    user_profile, created = UserProfile.objects.get_or_create(user=user)
+    telegram_user, created = TelegramUser.objects.get_or_create(
+        user_id=user.id,
+        defaults={'first_name': user.first_name, 'last_name': user.last_name}
+    )
 
-    # Check if ID document and signature are uploaded
-    if user_profile.id_document and user_profile.signature:
-        send_open_account_confirmation(update.message.chat_id)
-        update.message.reply_text(f'Thank you, {user.first_name}, for opening a bank account! Your account is now active.')
-    else:
-        update.message.reply_text('Please upload both your ID document and signature using /upload_id and /upload_signature.')
+    # Provide a response to the user
+    update.message.reply_text(f'Thank you, {user.first_name}, for opening a bank account! Your account is now active.use /upload_id to upload your ID document.')
 
-
-def send_open_account_confirmation(chat_id):
-    bot = Bot(token=TOKEN)
-    confirmation_message = "Your bank account has been successfully opened! Thank you for choosing our services."
-    bot.send_message(chat_id=chat_id, text=confirmation_message)
 
 
 @csrf_exempt
