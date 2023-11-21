@@ -43,5 +43,5 @@ def telegram_webhook(request):
 
 # Set the webhook URL using the Bot API
 bot = updater.bot
-#bot.setWebhook(url='http://127.0.0.1:8000/bot/webhook/')
+bot.setWebhook(url='https://your-pythonanywhere-username.pythonanywhere.com')
 
