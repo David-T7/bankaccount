@@ -10,7 +10,7 @@ class TelegramUser(models.Model):
         return f'{self.first_name} {self.last_name}'
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(TelegramUser, on_delete=models.CASCADE)
     id_document = models.ImageField(upload_to='id_documents/', null=True, blank=True)
     signature = models.ImageField(upload_to='signatures/', null=True, blank=True)
 
