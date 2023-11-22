@@ -15,4 +15,4 @@ class UserProfile(models.Model):
     signature = models.ImageField(upload_to='signatures/', null=True, blank=True)
 
     def __str__(self):
-        return self.user.username
+        return self.user.first_name
