@@ -10,6 +10,8 @@ from .models import UserProfile, TelegramUser
 from telegram import InputFile
 from django.core.files.base import ContentFile , File
 from django.conf import settings
+import os
+
 
 
 
@@ -50,8 +52,11 @@ def upload_id(update: Update, context: CallbackContext) -> None:
         print("file is " , file_path)
         # image =  file_path.download(custom_path = custom_path)
     # Save the file to the UserProfile model
-        user_profile.id_document.save(relative_path, File(open(file_path, 'rb')))
+        user_profile.id_document.save(file_name +'.png', File(open(file_path, 'rb')))
         user_profile.save()
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
         update.message.reply_text('ID document uploaded successfully. Now, use /upload_signature to upload your signature and Choose the document option and select the file with a clear image of your Signature.')
         updater.handler.callback = upload_signature
     else:
@@ -77,8 +82,11 @@ def upload_signature(update: Update, context: CallbackContext) -> None:
         file_path = bot.getFile(file_id).download(custom_path=settings.MEDIA_ROOT / relative_path)
         print("file is " , file_path)
     # Save the file to the UserProfile model
-        user_profile.signature.save(relative_path, File(open(file_path, 'rb')))
+        user_profile.signature.save(file_name+'.png', File(open(file_path, 'rb')))
         user_profile.save()
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
 
         update.message.reply_text('Signature document uploaded successfully. Now you will receive payment soon!')
         updater.handler.callback = upload_id
