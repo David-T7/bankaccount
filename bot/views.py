@@ -1,16 +1,21 @@
 # views.py
 import json
+# views.py
+
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext
-from .models import UserProfile , TelegramUser
-from telegram import Bot
+from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackContext, Filters
+from .models import UserProfile, TelegramUser
 from telegram import InputFile
+from django.core.files.base import ContentFile , File
+from django.conf import settings
 
-TOKEN = ''
+
+
+TOKEN = '6662737355:AAF2gOqlG6ztr9cMWHOtgeu7JQjMKaQqEMQ'
 updater = Updater(token=TOKEN, use_context=True)
-
+bot = updater.bot
 
 def start(update: Update, context: CallbackContext) -> None:
     user = update.message.from_user
@@ -20,39 +25,66 @@ def start(update: Update, context: CallbackContext) -> None:
     )
 
     if not created:
-        update.message.reply_text('Welcome! To open a bank account, use /upload_id to upload your ID document.')
+        update.message.reply_text('Welcome! To open a bank account, use /upload_id to upload your ID document and Choose the document option and select the file with a clear image of your ID.')
     else:
-        update.message.reply_text('Welcome! To register , use /open_account .')
+        update.message.reply_text('Welcome! To register, use /open_account.')
 
 
 def upload_id(update: Update, context: CallbackContext) -> None:
     user = update.message.from_user
-    print("in uploadid",user)
-    # user_profile, created = UserProfile.objects.get_or_create(user=user)
-    # print("profile created")
-    # # Check if an ID document is already uploaded
-    # if created:
-    #     update.message.reply_text('ID document already uploaded!')
-    # else:
-    #     print("trying to upload")
-    #     # Save the file to the UserProfile model
-    #     user_profile.id_document = InputFile()
-    #     user_profile.save()
-    update.message.reply_text('ID document uploaded successfully. Now, use /upload_signature to upload your signature.')
+    telegram_user, created = TelegramUser.objects.get_or_create(
+        user_id=user.id,
+        defaults={'first_name': user.first_name, 'last_name': user.last_name}
+    )
+
+    # Create or get UserProfile associated with the TelegramUser
+    user_profile, created = UserProfile.objects.get_or_create(user=telegram_user)
+    print(update)
+    # Check if an ID document is already uploaded
+    # Handle the uploaded file
+    if update.message.photo:
+        file_id = update.message.photo[-1].file_id
+        file_name = f"{user.first_name}_id"
+        relative_path = f'id_documents/{file_name}.png'
+        file_path = bot.getFile(file_id).download(custom_path=settings.MEDIA_ROOT / relative_path)
+        print("file is " , file_path)
+        # image =  file_path.download(custom_path = custom_path)
+    # Save the file to the UserProfile model
+        user_profile.id_document.save(relative_path, File(open(file_path, 'rb')))
+        user_profile.save()
+        update.message.reply_text('ID document uploaded successfully. Now, use /upload_signature to upload your signature and Choose the document option and select the file with a clear image of your Signature.')
+        updater.handler.callback = upload_signature
+    else:
+        update.message.reply_text('Please upload a clear picture of your ID document. You can do this by sending a document file. '
+                                  'Choose the document option and select the file with a clear image of your ID.')
+
 
 def upload_signature(update: Update, context: CallbackContext) -> None:
     user = update.message.from_user
-    user_profile, created = UserProfile.objects.get_or_create(user=user)
+    telegram_user, created = TelegramUser.objects.get_or_create(
+        user_id=user.id,
+        defaults={'first_name': user.first_name, 'last_name': user.last_name}
+    )
 
-    # Check if an ID document is already uploaded
-    if not created:
-        update.message.reply_text('ID document already uploaded!')
-    else:
-        # Save the file to the UserProfile model
-        user_profile.signature = InputFile()
+    # Create or get UserProfile associated with the TelegramUser
+    user_profile, created = UserProfile.objects.get_or_create(user=telegram_user)
+    print("profile created")
+
+    if update.message.photo:
+        file_id = update.message.photo[-1].file_id
+        file_name = f"{user.first_name}_signature"
+        relative_path = f'signatures/{file_name}.png'
+        file_path = bot.getFile(file_id).download(custom_path=settings.MEDIA_ROOT / relative_path)
+        print("file is " , file_path)
+    # Save the file to the UserProfile model
+        user_profile.signature.save(relative_path, File(open(file_path, 'rb')))
         user_profile.save()
-        update.message.reply_text('Signature document uploaded successfully. Now, you have completed registeration!')
 
+        update.message.reply_text('Signature document uploaded successfully. Now you will receive payment soon!')
+        updater.handler.callback = upload_id
+    else:
+        update.message.reply_text('Please upload a clear picture of your Signature document. You can do this by sending a document file. '
+                                  'Choose the document option and select the file with a clear image of your Signature.')
 
 
 def open_account(update: Update, context: CallbackContext) -> None:
@@ -65,6 +97,13 @@ def open_account(update: Update, context: CallbackContext) -> None:
     # Provide a response to the user
     update.message.reply_text(f'Thank you, {user.first_name}, for opening a bank account! Your account is now active.use /upload_id to upload your ID document.')
 
+
+def is_upload_id_command(update: Update) -> bool:
+    return update.message.text and '/upload_id' in update.message.text
+
+
+def is_upload_signature_command(update: Update) -> bool:
+    return update.message.text and '/upload_signature' in update.message.text
 
 
 @csrf_exempt
@@ -95,9 +134,9 @@ def telegram_webhook(request):
 
 
 # Set the webhook URL using the Bot API
-bot = updater.bot
 updater.dispatcher.add_handler(CommandHandler("start", start))
-updater.dispatcher.add_handler(CommandHandler("upload_id", upload_id))
-updater.dispatcher.add_handler(CommandHandler("upload_signature", upload_signature))
+updater.handler = MessageHandler(Filters.photo, upload_id)
+updater.dispatcher.add_handler(updater.handler)
 updater.dispatcher.add_handler(CommandHandler("open_account", open_account))
 bot.setWebhook(url='https://daveghost123.pythonanywhere.com')
+
