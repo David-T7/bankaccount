@@ -13,7 +13,7 @@ from django.conf import settings
 
 
 
-TOKEN = '6662737355:AAF2gOqlG6ztr9cMWHOtgeu7JQjMKaQqEMQ'
+TOKEN = ''
 updater = Updater(token=TOKEN, use_context=True)
 bot = updater.bot
 
